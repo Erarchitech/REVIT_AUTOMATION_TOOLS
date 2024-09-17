@@ -72,6 +72,39 @@ def find_cell_coordinates(excel_path, target_value):
         except:
             pass
         return row_ind, col_ind, sheet_index
+    
+
+def find_cell_coordinates_on_sheet(excel_path, sheet_index, target_value):
+    # Open the Excel workbook
+    workbook = xlrd.open_workbook(excel_path)
+    # Iterate through all sheets
+    row_ind = []
+    col_ind = []
+    sheet = workbook.sheet_by_index(sheet_index)
+    # Iterate through all rows and columns
+    for row in range(sheet.nrows):
+        for col in range(sheet.ncols):
+            cell_value = str(sheet.cell_value(row, col))
+            cell_dot_ind = cell_value.find('.')
+            cell_score_ind = cell_value.find('_')
+            if cell_dot_ind != -1 and cell_score_ind == -1:
+                mod_cell_value = cell_value[:cell_dot_ind]
+            else:
+                mod_cell_value = cell_value
+            
+            # Check if the cell contains the target value
+            if mod_cell_value == str(target_value):
+                row_ind.append(row + 1)
+                col_ind.append(col + 1)
+    if isinstance(row_ind, list) and len(row_ind)>1:
+        return row_ind, col_ind
+    else:
+        try:
+            row_ind = row_ind[0]
+            col_ind = col_ind[0]
+        except:
+            pass
+        return row_ind, col_ind
 
 def find_value_in_excel(excel_path, target_value):
     # Open the Excel workbook
@@ -235,12 +268,13 @@ family_names = []
 family_dict = {}
 for target_value in marks_modified:
     print '==================ЧТЕНИЕ ДАННЫХ ИЗ РЕЕСТРА========================='
+
+    param_dict = {}
     
     #Извлекаем значения листа и строк типоразмеров, соотвествующих марке семейства
     mark_row_list = []
     mark_row_list = find_cell_coordinates(excel_path, target_value)[0]
-    for a in mark_row_list:
-        print a
+    # print mark_row_list
     multiple_types = False
     if isinstance(mark_row_list, list):
         multiple_types = True
@@ -252,29 +286,40 @@ for target_value in marks_modified:
     # exec("print 'Код каталога в реестре - '+ '{}'".format(target_sheet.name))
 
     #Собираем все значения параметров из реестра в список
-    types_dict = {}
-    param_dict = {}
 
     for row_ind in mark_row_list:
-        print row_ind
-        param_dict = {}
         sheet_ind_list = find_cell_coordinates(excel_path, 'CP_Mat_Finish_01')[2] # Определяем индексы всех листов, где есть параметр материала
-        print('row_ind -' + '{}', sheet_ind_list + '{}'.format(row_ind, sheet_ind_list))
+        # print('row_ind -' + '{}', sheet_ind_list + '{}'.format(row_ind, sheet_ind_list))
 
         for param in Parameter_List_Internal:
-            if isinstance(sheet_ind_list, list):
-                for x, ind in enumerate(sheet_ind_list):
-                    if x == sheet_index: # Проверяем индекс листа на соответствие искомому листу
-                        param_row_ind = find_cell_coordinates(excel_path, param)[0][ind]
-                        print param_row_ind
-                        param_col_ind = find_cell_coordinates(excel_path, param)[1][ind]-1 # извлекаем индекс столбца параметра материала на данном листе
-                        print('check1')
-            if param_row_ind == row_ind:
-                print('check2')
-                material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
-                if len(material_description)>0:
-                    param_dict[param] = material_description
-                    exec("print '{} - ' + '{}'".format(param, material_description))
+            param_rows_list = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[0] #извлекаем все строки параметра материала на данном листе
+            # print param_rows_list
+            if isinstance(param_rows_list, list) and len(param_rows_list)>1:
+                param_col_ind = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[1][0]-1  # извлекаем индекс столбца параметра материала на данном листе
+                # print('check1')
+                if row_ind in param_rows_list:
+                    # print('check2')
+                    material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
+                    if len(material_description)>0:
+                        if param not in param_dict.keys():
+                            param_dict[param] = material_description
+                            # Parameter_List_Internal.remove(param)
+                            # exec("print '{} - ' + '{}'".format(param, material_description))
+            else:
+                param_col_ind = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[1]-1
+                # print('check3')
+                if row_ind == param_rows_list:
+                    material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
+                    if len(material_description)>0:
+                        if param not in param_dict.keys():
+                            param_dict[param] = material_description
+                            # Parameter_List_Internal.remove(param)
+                            # exec("print '{} - ' + '{}'".format(param, material_description))
+    
+    #Проверка прохода по типам и параметрам
+    exec("print 'Марка - {}'".format(target_value))
+    for par, value in param_dict.items():
+        exec("print '{} - ' + '{}'".format(par, value))
 
         # check_list = [param_dict[i] for i in param_dict.keys()]
         # for i in check_list:
