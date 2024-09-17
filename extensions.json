@@ -1,0 +1,61 @@
+{
+    "extensions": [
+        {
+            "builtin": "True",
+            "enable": "True",
+            "type": "extension",
+            "rocket_mode_compatible": "False",
+            "name": "CREA20",
+            "description": "CreaPlus Tools",
+            "author": "Evgenii Ermolenko",
+            "author_profile": "https://github.com/Erarchitech",
+            "url": "https://github.com/gtalarico/pyrevitplus.git",
+            "website": "https://github.com/gtalarico/pyrevitplus",
+            "image": "",
+            "dependencies": []
+        },
+        {
+            "builtin": "True",
+            "enable": "True",
+            "type": "extension",
+            "rocket_mode_compatible": "False",
+            "name": "CREA22",
+            "description": "CreaPlus Tools",
+            "author": "Evgenii Ermolenko",
+            "author_profile": "https://github.com/Erarchitech",
+            "url": "https://github.com/gtalarico/pyrevitplus.git",
+            "website": "https://github.com/gtalarico/pyrevitplus",
+            "image": "",
+            "dependencies": []
+        },
+        {
+            "builtin": "False",
+            "enable": "False",
+            "type": "extension",
+            "rocket_mode_compatible": "False",
+            "name": "DEV20",
+            "description": "CreaPlus Tools",
+            "author": "Evgenii Ermolenko",
+            "author_profile": "https://github.com/Erarchitech",
+            "url": "https://github.com/gtalarico/pyrevitplus.git",
+            "website": "https://github.com/gtalarico/pyrevitplus",
+            "image": "",
+            "dependencies": []
+        },
+        {
+            "builtin": "False",
+            "enable": "False",
+            "type": "extension",
+            "rocket_mode_compatible": "False",
+            "name": "DEV22",
+            "description": "CreaPlus Tools",
+            "author": "Evgenii Ermolenko",
+            "author_profile": "https://github.com/Erarchitech",
+            "url": "https://github.com/gtalarico/pyrevitplus.git",
+            "website": "https://github.com/gtalarico/pyrevitplus",
+            "image": "",
+            "dependencies": []
+        }
+        
+    ]
+}
