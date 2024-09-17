@@ -173,6 +173,7 @@ for sheet in selected_sheets:
                     marks.append(mark)
 elements_to_exclude = ["CP_Gen_Mark", 'Марка типа', 'Марка', '']
 marks = [element for element in marks if element not in elements_to_exclude]
+marks = list(set(marks))
 selected_marks = pyrevit.forms.SelectFromList.show(marks, title = 'Выбери Марки', multiselect = True, button_name = 'Выбрать')
 
 if len(selected_marks) == 0:
@@ -185,17 +186,15 @@ if len(selected_marks) == 0:
 
 
 Parameter_List_Internal = [
-    "CP_Gen_Mark",
-    "CP_Dim_Length",
-    "CP_Dim_Width",
-    "CP_Dim_Height",
-    "CP_Gen_Description",
-    "CP_Gen_Name",
-    "UNIFORMAT_CODE",
-    "ALL_MODEL_TYPE_COMMENTS",
-    "ALL_MODEL_DESCRIPTION",
-    "ALL_MODEL_MANUFACTURER",
-    "ALL_MODEL_MODEL"
+    'CP_Mat_Finish_01',
+    'CP_Mat_Finish_02',
+    'CP_Mat_Finish_03',
+    'CP_Mat_Finish_04',
+    'CP_Mat_Finish_05',
+    'CP_Mat_Finish_06',
+    'CP_Mat_Finish_07',
+    'CP_Mat_Finish_08',
+    'CP_Mat_Finish_09'
 ]
 
 Categories_Dict = {
@@ -215,8 +214,6 @@ fam_type_input_names = [
     "CP_Gen_Mark",
     "ALL_MODEL_TYPE_COMMENTS",
     "FLOOR_ATTR_THICKNESS_PARAM"
-
-    
 ]
 
 marks_modified = []
@@ -237,11 +234,13 @@ library_folder_path = excel_path[:lib_ind+len('01_БИБЛИОТЕКА_ПРОЕ�
 family_names = []
 family_dict = {}
 for target_value in marks_modified:
-    # print '==================ЧТЕНИЕ ДАННЫХ ИЗ РЕЕСТРА========================='
+    print '==================ЧТЕНИЕ ДАННЫХ ИЗ РЕЕСТРА========================='
     
     #Извлекаем значения листа и строк типоразмеров, соотвествующих марке семейства
     mark_row_list = []
     mark_row_list = find_cell_coordinates(excel_path, target_value)[0]
+    for a in mark_row_list:
+        print a
     multiple_types = False
     if isinstance(mark_row_list, list):
         multiple_types = True
@@ -255,65 +254,31 @@ for target_value in marks_modified:
     #Собираем все значения параметров из реестра в список
     types_dict = {}
     param_dict = {}
-    if multiple_types:
-        for row_ind in mark_row_list:
-            param_dict = {}
-            for param in Parameter_List_Internal:
-                sheet_ind_list = find_cell_coordinates(excel_path, param)[2]
-                if isinstance(sheet_ind_list, list):
-                    for x, ind in enumerate(sheet_ind_list):
-                        if x == sheet_index:
-                            col_ind = find_cell_coordinates(excel_path, param)[1][ind]-1
-                            # exec("print 'Координаты параметра типа - ' + '{}' + ':' + '{}'".format(row_ind,col_ind))
-                            param_dict[param] = target_sheet.cell_value(row_ind-1, col_ind)
-            sheet_ind_list = find_cell_coordinates(excel_path, "CP_Gen_Mark")[2]
-            if isinstance(sheet_ind_list, list):
-                for x, ind in enumerate(sheet_ind_list):
-                    if x == sheet_index:
-                        col_ind = find_cell_coordinates(excel_path, "CP_Gen_Mark")[1][ind]-1
-                        param_dict["CP_Gen_Mark"] = target_sheet.cell_value(row_ind-1, col_ind)
-            sheet_ind_list = find_cell_coordinates(excel_path, "Discipline")[2]
-            if isinstance(sheet_ind_list, list):
-                for x, ind in enumerate(sheet_ind_list):
-                    if x == sheet_index:
-                        col_ind = find_cell_coordinates(excel_path, "Discipline")[1][ind]-1
-                        param_dict["Discipline"] = target_sheet.cell_value(row_ind-1, col_ind)
-                        check_list = [param_dict[i] for i in param_dict.keys()]
-    else:
-        row_ind = mark_row_list
-        # print "check3"
-        for param in Parameter_List_Internal:
-            sheet_ind_list_2 = find_cell_coordinates(excel_path, param)[2]
-            # print sheet_ind_list_2
-            if isinstance(sheet_ind_list_2, list):
-                # print "pass"
-                for x, ind in enumerate(sheet_ind_list_2):
-                    # print "pass2"
-                    # print x
-                    # print sheet_index
-                    if x == sheet_index-1:
-                        # print "pass3"
-                        # print ind
-                        col_ind = find_cell_coordinates(excel_path, param)[1][ind-3]-1
-                        # print col_ind
-                        param_dict[param] = target_sheet.cell_value(row_ind-1, col_ind)
-                # print param_dict['CP_Dim_Width']
-        sheet_ind_list_2 = find_cell_coordinates(excel_path, "CP_Gen_Mark")[2]
-        if isinstance(sheet_ind_list_2, list):
-            for x, ind in enumerate(sheet_ind_list_2):
-                if x == sheet_index-1:
-                    col_ind = find_cell_coordinates(excel_path, "CP_Gen_Mark")[1][ind-3]-1
-                    param_dict["CP_Gen_Mark"] = target_sheet.cell_value(row_ind-1, col_ind)
-        sheet_ind_list_2 = find_cell_coordinates(excel_path, "Discipline")[2]
-        if isinstance(sheet_ind_list_2, list):
-            for x, ind in enumerate(sheet_ind_list_2):
-                if x == sheet_index-1:
-                    col_ind = find_cell_coordinates(excel_path, "Discipline")[1][ind-3]-1
-                    param_dict["Discipline"] = target_sheet.cell_value(row_ind-1, col_ind)
-                    check_list = [param_dict[i] for i in param_dict.keys()]
 
-        for i in check_list:
-            print i
+    for row_ind in mark_row_list:
+        print row_ind
+        param_dict = {}
+        sheet_ind_list = find_cell_coordinates(excel_path, 'CP_Mat_Finish_01')[2] # Определяем индексы всех листов, где есть параметр материала
+        print('row_ind -' + '{}', sheet_ind_list + '{}'.format(row_ind, sheet_ind_list))
+
+        for param in Parameter_List_Internal:
+            if isinstance(sheet_ind_list, list):
+                for x, ind in enumerate(sheet_ind_list):
+                    if x == sheet_index: # Проверяем индекс листа на соответствие искомому листу
+                        param_row_ind = find_cell_coordinates(excel_path, param)[0][ind]
+                        print param_row_ind
+                        param_col_ind = find_cell_coordinates(excel_path, param)[1][ind]-1 # извлекаем индекс столбца параметра материала на данном листе
+                        print('check1')
+            if param_row_ind == row_ind:
+                print('check2')
+                material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
+                if len(material_description)>0:
+                    param_dict[param] = material_description
+                    exec("print '{} - ' + '{}'".format(param, material_description))
+
+        # check_list = [param_dict[i] for i in param_dict.keys()]
+        # for i in check_list:
+        #     print i
 
 
 #     fam_category = Categories_Dict[target_sheet.name][0]
