@@ -201,7 +201,8 @@ Categories_Dict = {
     'MF': [BuiltInCategory.OST_GenericModel, '02_FURNITURE'],
     'PLF': [BuiltInCategory.OST_PlumbingFixtures, '06_PLUMBING_FIXTURES'],
     'SE': [BuiltInCategory.OST_SpecialityEquipment, '03_SPECIALTY_EQUIPMENT'],
-    'EF': [BuiltInCategory.OST_ElectricalFixtures, '05_ELECTRICAL_FIXTURES']
+    'EF': [BuiltInCategory.OST_ElectricalFixtures, '05_ELECTRICAL_FIXTURES'],
+    'LF01': [BuiltInCategory.OST_LightingFixtures, '04_LIGHTING_FIXTURES']
 }
 
 
