@@ -300,9 +300,19 @@ for target_value in marks_modified:
                 if row_ind in param_rows_list:
                     # print('check2')
                     material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
+                    thickness = target_sheet.cell_value(row_ind-1, param_col_ind+1)
+                    material_name = target_sheet.cell_value(row_ind-1, param_col_ind+3)
                     if len(material_description)>0:
                         if param not in param_dict.keys():
-                            param_dict[param] = material_description
+                            param_dict[param] = []
+                            param_dict[param].append(thickness)
+                            param_dict[param].append(material_description)
+                            param_dict[param].append(material_name)
+                    if param == 'CP_Mat_Finish_01':
+                        type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
+                        function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
+                        param_dict[param].append(type_comments)
+                        param_dict[param].append(function)
                             # Parameter_List_Internal.remove(param)
                             # exec("print '{} - ' + '{}'".format(param, material_description))
             else:
@@ -310,16 +320,33 @@ for target_value in marks_modified:
                 # print('check3')
                 if row_ind == param_rows_list:
                     material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
+                    thickness = target_sheet.cell_value(row_ind-1, param_col_ind+1)
+                    material_name = target_sheet.cell_value(row_ind-1, param_col_ind+3)
                     if len(material_description)>0:
                         if param not in param_dict.keys():
-                            param_dict[param] = material_description
+                            param_dict[param] = []
+                            param_dict[param].append(thickness)
+                            param_dict[param].append(material_description)
+                            param_dict[param].append(material_name)
+                    if param == 'CP_Mat_Finish_01':
+                        type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
+                        function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
+                        param_dict[param].append(type_comments)
+                        param_dict[param].append(function)
                             # Parameter_List_Internal.remove(param)
                             # exec("print '{} - ' + '{}'".format(param, material_description))
     
     #Проверка прохода по типам и параметрам
     exec("print 'Марка - {}'".format(target_value))
     for par, value in param_dict.items():
-        exec("print '{} - ' + '{}'".format(par, value))
+        exec("print '{}'".format(par))
+        exec("print 'Толщина - ' + '{}'".format(value[0]))
+        exec("print 'Описание материала - ' + '{}'".format(value[1]))
+        exec("print 'Материал Revit - ' + '{}'".format(value[2]))
+        if len(value)>3:
+            exec("print 'Комментарии к типоразмеру - ' + '{}'".format(value[3]))
+            exec("print 'Функция - ' + '{}'".format(value[4]))
+        print("___")
 
         # check_list = [param_dict[i] for i in param_dict.keys()]
         # for i in check_list:
