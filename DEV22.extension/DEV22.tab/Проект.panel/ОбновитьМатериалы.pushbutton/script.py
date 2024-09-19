@@ -182,6 +182,24 @@ def family_reload(filePath, loadOptions, ProjectDoc = doc):
         return 1
     except:
         return 0
+    
+# Функция для получения значения параметра толщины
+def get_thickness_parameter(element):
+    # Проверяем тип элемента (например, стена, перекрытие или потолок)
+    if element.Category.Id.IntegerValue == int(BuiltInCategory.OST_Walls):
+        param = element.get_Parameter(BuiltInParameter.WALL_ATTR_WIDTH_PARAM)
+    elif element.Category.Id.IntegerValue == int(BuiltInCategory.OST_Floors):
+        param = element.get_Parameter(BuiltInParameter.FLOOR_ATTR_THICKNESS_PARAM)
+    elif element.Category.Id.IntegerValue == int(BuiltInCategory.OST_Ceilings):
+        param = element.get_Parameter(BuiltInParameter.CEILING_THICKNESS_PARAM)
+    else:
+        param = None
+
+    # Если параметр найден и его тип данных - Double, то возвращаем значение
+    if param and param.StorageType == StorageType.Double:
+        # Значение параметра в футах, переводим в метры (если нужно)
+        return param.AsDouble() * 0.3048  # Преобразование из футов в метры
+    return None
 
 
 #USER INPUTS
@@ -227,7 +245,8 @@ Parameter_List_Internal = [
     'CP_Mat_Finish_06',
     'CP_Mat_Finish_07',
     'CP_Mat_Finish_08',
-    'CP_Mat_Finish_09'
+    'CP_Mat_Finish_09',
+    'FLOOR_ATTR_THICKNESS_PARAM'
 ]
 
 Categories_Dict = {
@@ -308,6 +327,12 @@ for target_value in marks_modified:
                             param_dict[param].append(thickness)
                             param_dict[param].append(material_description)
                             param_dict[param].append(material_name)
+                    elif param == 'FLOOR_ATTR_THICKNESS_PARAM':
+                        print('check04')
+                        if param not in param_dict.keys():
+                            param_dict[param] = []
+                            param_dict[param].append(thickness)
+                            print('check03')
                     if param == 'CP_Mat_Finish_01':
                         type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
                         function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
@@ -328,6 +353,12 @@ for target_value in marks_modified:
                             param_dict[param].append(thickness)
                             param_dict[param].append(material_description)
                             param_dict[param].append(material_name)
+                    elif param == 'FLOOR_ATTR_THICKNESS_PARAM':
+                        print('check04')
+                        if param not in param_dict.keys():
+                            param_dict[param] = []
+                            param_dict[param].append(thickness)
+                            print('check03')
                     if param == 'CP_Mat_Finish_01':
                         type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
                         function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
@@ -336,17 +367,37 @@ for target_value in marks_modified:
                             # Parameter_List_Internal.remove(param)
                             # exec("print '{} - ' + '{}'".format(param, material_description))
     
+    mark = target_value
+    comments = param_dict['CP_Mat_Finish_01'][3]
+    thickness_total = param_dict['FLOOR_ATTR_THICKNESS_PARAM'][0]
+    if "ПП" in mark:
+        prefix_1 = 'FL_'
+    elif 'П' in mark:
+        prefix_1 = 'FFL_'
+    prefix_2 = param_dict['CP_Mat_Finish_01'][4]
+    # print('check02')
+
     #Проверка прохода по типам и параметрам
-    exec("print 'Марка - {}'".format(target_value))
+    exec("print 'Марка - {}'".format(mark))
+    if len(prefix_1)>0 and len(prefix_2)>0:
+        # type_name = 'type'
+        type_name = prefix_1 + prefix_2 + '_' + mark + '_'  + comments + '_' + str(int(thickness_total)) + 'мм'
+        exec("print 'Имя типоразмера - {}'".format(type_name))
+    else:
+        print('В реестре не указана функция')
+    print('check01')
+
     for par, value in param_dict.items():
-        exec("print '{}'".format(par))
-        exec("print 'Толщина - ' + '{}'".format(value[0]))
-        exec("print 'Описание материала - ' + '{}'".format(value[1]))
-        exec("print 'Материал Revit - ' + '{}'".format(value[2]))
+        if len(value)>1:
+            exec("print '{}'".format(par))
+            exec("print 'Толщина - ' + '{}'".format(value[0]))
+            exec("print 'Описание материала - ' + '{}'".format(value[1]))
+            exec("print 'Материал Revit - ' + '{}'".format(value[2]))
         if len(value)>3:
             exec("print 'Комментарии к типоразмеру - ' + '{}'".format(value[3]))
             exec("print 'Функция - ' + '{}'".format(value[4]))
         print("___")
+    exec("print 'Общая толщина пирога - {}' + 'мм'".format(thickness_total))
 
         # check_list = [param_dict[i] for i in param_dict.keys()]
         # for i in check_list:
