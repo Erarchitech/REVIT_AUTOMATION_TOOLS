@@ -24,6 +24,9 @@ from pyrevit import forms
 from pyrevit import HOST_APP
 from pyrevit import revit
 
+from StructureUpdater import types_updater
+from TypeParametersUpdater import parameters_updater
+
 uiapp = __revit__ # noqa
 app = __revit__.Application # noqa
 uiapp = HOST_APP.uiapp
@@ -146,43 +149,6 @@ def flatten(element, flat_list=None):
         flat_list.append(element) 
     return flat_list
 
-# Function to iterate through files in a folder and its subfolders
-def iterate_files(folder, family_names):
-    doc_paths = []
-    for family_name in family_names:
-        for root, dirs, files in os.walk(folder):
-            for file in files:
-                if file.endswith(".rfa") and family_name == file:
-                    doc_paths.append(os.path.join(root, file))
-    return doc_paths
-
-def close_inactive_docs(uiapp, save_modified=False, close_ui_docs=False):
-    for doc in uiapp.Application.Documents:
-        if not close_ui_docs and UI.UIDocument(doc).GetOpenUIViews():
-            continue
-        name = doc.Title
-        doc.Close(save_modified)
-        print 'Closed: {}'.format(name)
-
-
-# Function to open and close family documents
-
-class FamilyOption(IFamilyLoadOptions):
-    def OnFamilyFound(self, familyInUse, overwriteParameterValues):
-        overwriteParameterValues = True
-        return True
-    def OnSharedFamilyFound(self, sharedFamily, familyInUse, source, overwriteParameterValues):
-        overwriteParameterValues = False
-        source = FamilySource.Family
-        return True
-    
-def family_reload(filePath, loadOptions, ProjectDoc = doc):
-    try:
-        ProjectDoc.LoadFamily(filePath, loadOptions)
-        return 1
-    except:
-        return 0
-    
 # Функция для получения значения параметра толщины
 def get_thickness_parameter(element):
     # Проверяем тип элемента (например, стена, перекрытие или потолок)
@@ -232,10 +198,6 @@ if len(selected_marks) == 0:
 
 # print selected_marks
 
-
-
-
-
 Parameter_List_Internal = [
     'CP_Mat_Finish_01',
     'CP_Mat_Finish_02',
@@ -250,12 +212,9 @@ Parameter_List_Internal = [
 ]
 
 Categories_Dict = {
-    'FF': [BuiltInCategory.OST_Furniture, '02_FURNITURE'],
-    'CF': [BuiltInCategory.OST_Furniture, '02_FURNITURE'],
-    'MF': [BuiltInCategory.OST_GenericModel, '02_FURNITURE'],
-    'PLF': [BuiltInCategory.OST_PlumbingFixtures, '06_PLUMBING_FIXTURES'],
-    'SE': [BuiltInCategory.OST_SpecialityEquipment, '03_SPECIALTY_EQUIPMENT'],
-    'EF': [BuiltInCategory.OST_ElectricalFixtures, '05_ELECTRICAL_FIXTURES']
+    'FL': [FloorType, 'Перекрытия'],
+    'WL': [WallType, 'Стены'],
+    'CL': [CeilingType, 'Потолки'],
 }
 
 
@@ -283,8 +242,7 @@ for mark in selected_marks:
 lib_ind = excel_path.find('01_БИБЛИОТЕКА_ПРОЕКТА')
 library_folder_path = excel_path[:lib_ind+len('01_БИБЛИОТЕКА_ПРОЕКТА')+1] + '01_СЕМЕЙСТВА\\'
 
-family_names = []
-family_dict = {}
+type_dict = {}
 for target_value in marks_modified:
     print '==================ЧТЕНИЕ ДАННЫХ ИЗ РЕЕСТРА========================='
 
@@ -302,13 +260,18 @@ for target_value in marks_modified:
     else:
         sheet_index = find_cell_coordinates(excel_path, target_value)[2]
     target_sheet = workbook.sheet_by_index(sheet_index)
-    # exec("print 'Код каталога в реестре - '+ '{}'".format(target_sheet.name))
+    exec("print 'Код каталога в реестре - '+ '{}'".format(target_sheet.name))
 
-    #Собираем все значения параметров из реестра в список
+    #Собираем все значения параметров из реестра в словарь
 
     for row_ind in mark_row_list:
         sheet_ind_list = find_cell_coordinates(excel_path, 'CP_Mat_Finish_01')[2] # Определяем индексы всех листов, где есть параметр материала
-        # print('row_ind -' + '{}', sheet_ind_list + '{}'.format(row_ind, sheet_ind_list))
+        # print('row_ind -' + '{}'.format(row_ind))
+        # print('check00_mark_row_list')
+        image_param_col = find_cell_coordinates_on_sheet(excel_path, sheet_index, 'CP_Gen_Image')[1]
+        image_link = sheet.cell_value(row_ind, image_param_col-1)
+        if image_link:
+            param_dict['CP_Gen_Image'] = image_link
 
         for param in Parameter_List_Internal:
             param_rows_list = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[0] #извлекаем все строки параметра материала на данном листе
@@ -324,15 +287,16 @@ for target_value in marks_modified:
                     if len(material_description)>0:
                         if param not in param_dict.keys():
                             param_dict[param] = []
-                            param_dict[param].append(thickness)
-                            param_dict[param].append(material_description)
-                            param_dict[param].append(material_name)
+                        param_dict[param].append(thickness)
+                        param_dict[param].append(material_description)
+                        param_dict[param].append(material_name)
                     elif param == 'FLOOR_ATTR_THICKNESS_PARAM':
-                        print('check04')
+                        # print('check04')
                         if param not in param_dict.keys():
                             param_dict[param] = []
-                            param_dict[param].append(thickness)
-                            print('check03')
+                        param_dict[param].append(thickness)
+                        # param_dict[param] = thickness
+                        # print('check03')
                     if param == 'CP_Mat_Finish_01':
                         type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
                         function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
@@ -344,38 +308,50 @@ for target_value in marks_modified:
                 param_col_ind = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[1]-1
                 # print('check3')
                 if row_ind == param_rows_list:
+                    # print('check04')
                     material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
                     thickness = target_sheet.cell_value(row_ind-1, param_col_ind+1)
                     material_name = target_sheet.cell_value(row_ind-1, param_col_ind+3)
                     if len(material_description)>0:
                         if param not in param_dict.keys():
                             param_dict[param] = []
-                            param_dict[param].append(thickness)
-                            param_dict[param].append(material_description)
-                            param_dict[param].append(material_name)
+                        param_dict[param].append(thickness)
+                        param_dict[param].append(material_description)
+                        param_dict[param].append(material_name)
                     elif param == 'FLOOR_ATTR_THICKNESS_PARAM':
-                        print('check04')
+                        # print('check05')
                         if param not in param_dict.keys():
                             param_dict[param] = []
-                            param_dict[param].append(thickness)
-                            print('check03')
+                        param_dict[param].append(thickness)
+                        # param_dict[param] = thickness
+                        # print('check06')
                     if param == 'CP_Mat_Finish_01':
                         type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
                         function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
                         param_dict[param].append(type_comments)
                         param_dict[param].append(function)
-                            # Parameter_List_Internal.remove(param)
-                            # exec("print '{} - ' + '{}'".format(param, material_description))
     
+    fam_category = Categories_Dict[target_sheet.name][0]
+    param_dict['Category'] = fam_category
     mark = target_value
+    param_dict['CP_Gen_Mark'] = mark
     comments = param_dict['CP_Mat_Finish_01'][3]
     thickness_total = param_dict['FLOOR_ATTR_THICKNESS_PARAM'][0]
+    print(thickness_total)
+    category_name = Categories_Dict[target_sheet.name][1]
     if "ПП" in mark:
         prefix_1 = 'FL_'
     elif 'П' in mark:
         prefix_1 = 'FFL_'
+    elif 'СТ' in mark:
+        prefix_1 = 'WL_'
+    elif 'ОТ' in mark:
+        prefix_1 = 'WF_'
+    elif 'ПО' in mark:
+        prefix_1 = 'CL_'
     prefix_2 = param_dict['CP_Mat_Finish_01'][4]
     # print('check02')
+
 
     #Проверка прохода по типам и параметрам
     exec("print 'Марка - {}'".format(mark))
@@ -386,94 +362,32 @@ for target_value in marks_modified:
     else:
         print('В реестре не указана функция')
     print('check01')
-
-    for par, value in param_dict.items():
-        if len(value)>1:
-            exec("print '{}'".format(par))
-            exec("print 'Толщина - ' + '{}'".format(value[0]))
-            exec("print 'Описание материала - ' + '{}'".format(value[1]))
-            exec("print 'Материал Revit - ' + '{}'".format(value[2]))
-        if len(value)>3:
-            exec("print 'Комментарии к типоразмеру - ' + '{}'".format(value[3]))
-            exec("print 'Функция - ' + '{}'".format(value[4]))
-        print("___")
     exec("print 'Общая толщина пирога - {}' + 'мм'".format(thickness_total))
 
-        # check_list = [param_dict[i] for i in param_dict.keys()]
-        # for i in check_list:
-        #     print i
+    
+    for par, value in param_dict.items():
+        if par == 'Category':
+            exec("print 'Категория - ' + '{}'".format(category_name))
+            print("___")
+        elif par == 'CP_Gen_Image':
+            exec("print 'Путь к изображению - ' + '{}'".format(value))
+            print("___")
+        elif par == 'CP_Gen_Mark':
+            exec("print 'Марка типа - ' + '{}'".format(value))
+            print("___")
+        else:
+            if len(value)>1:
+                exec("print '{}'".format(par))
+                exec("print 'Толщина - ' + '{}'".format(value[0]))
+                exec("print 'Описание материала - ' + '{}'".format(value[1]))
+                exec("print 'Материал Revit - ' + '{}'".format(value[2]))
+            if len(value)>3:
+                exec("print 'Комментарии к типоразмеру - ' + '{}'".format(value[3]))
+                exec("print 'Функция - ' + '{}'".format(value[4]))
+            print("___")
 
 
-#     fam_category = Categories_Dict[target_sheet.name][0]
+    type_dict[type_name] = param_dict
 
-#     #Составляем имя файла семейства по-умолчанию
-#     prefix_ind_start = find_all_indexes(excel_path,'\\')[-1]+1
-#     excel_file_name = excel_path[prefix_ind_start:]
-#     prefix_ind_end = excel_file_name.find('_')
-#     prefix = excel_file_name[:prefix_ind_end]
-#     Gen_Mark_ind = param_dict["CP_Gen_Mark"].find('.')
-#     if Gen_Mark_ind == -1:
-#         Gen_Mark_modified = param_dict["CP_Gen_Mark"]
-#     else:
-#         Gen_Mark_modified = param_dict["CP_Gen_Mark"][:Gen_Mark_ind]
-#     revit_version = app.VersionNumber
-#     family_name = prefix + '_' + param_dict["Discipline"] + '_' + param_dict["UNIFORMAT_CODE"] + '_' + Gen_Mark_modified + '_' + param_dict["ALL_MODEL_TYPE_COMMENTS"] + '_R' + revit_version[-2:] + '.rfa'
-#     index = excel_path.find('01_БИБЛИОТЕКА_ПРОЕКТА')
-#     family_file_path = excel_path[:index+len('01_БИБЛИОТЕКА_ПРОЕКТА')+1] + '01_СЕМЕЙСТВА\\' + Categories_Dict[target_sheet.name][1] + '\\'
-#     # print family_file_path
-
-
-
-#     #Записываем значения параметров в семействах
-#     # print library_folder_path
-#     # print family_name
-#     fam_path = False
-#     fam_exist_in_lib = False
-#     for root, dirs, files in os.walk(library_folder_path):
-#         # print 'check1'
-#         for file in files:
-#             # print file
-#             # print 'check2'
-#             if file.endswith(".rfa") and '.00' not in file and family_name in file:
-#                 # print 'check3'
-#                 fam_path = os.path.join(root, file)
-#                 fam_exist_in_lib = True
-#                 # print fam_path
-#     # print fam_path
-#     if not fam_path:
-#         fam_path = os.path.join(family_file_path, family_name)
-#         # print fam_path
-#     if family_name not in family_dict.keys():
-#         family_dict[family_name] = []
-#     family_dict[family_name].append(fam_path)
-#     family_dict[family_name].append(fam_exist_in_lib)
-
-# print '================================================================================'
-# print '================================================================================'
-# old_doc = False
-# with forms.ProgressBar(step = 1, title = 'Загрузка семейств из библиотеки..' + '{value} из {max_value}', cancellable = True) as pb:
-
-#     pbTotal1 = len(family_dict.keys())
-#     pbCount1 = 1
-#     pbWorks1 = 0
-
-#     loadOption = FamilyOption()
-
-#     with revit.Transaction('Загрузка семейств'):
-#         for fam_name, fam_data in family_dict.items():
-#             doc_path = fam_data[0].replace("\\", "\\\\")
-#             fam_exist_in_lib_= fam_data[1]
-#             if fam_exist_in_lib_:
-#                 exec("print 'Семейство обнаружено - '+ '{}'".format(fam_name))
-#                 exec("print 'Путь к семейству: '+ '{}'".format(str(doc_path)))
-#                 if pb.cancelled:
-#                     break
-#                 else:
-#                     pbWorks1 += family_reload(doc_path,loadOption, doc)
-#                 pb.update_progress(pbCount1, pbTotal1)
-#                 pbCount1 += 1
-#             else:
-#                 exec("print 'Семейство не обнаружено - '+ '{}'".format(fam_name))
-#                 exec("print 'Путь к семейству: '+ '{}'".format(str(doc_path)))
-# msg = str(pbWorks1) + '/' + str(pbTotal1) + ' семейств обновлены'
-# forms.alert(msg, title = 'Загрузка завершена', warn_icon = False)
+updated_types = types_updater(doc, type_dict)
+updated_parameters = parameters_updater(doc, type_dict)

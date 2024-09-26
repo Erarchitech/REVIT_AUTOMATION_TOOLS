@@ -39,19 +39,26 @@ def get_default_type_by_class(doc, class_name):
     ]
     if class_name in valid_class_list:
         collector = FEC(doc).OfClass(class_name).WhereElementIsElementType().ToElements()
+        # print('check_01')
         for type_ in collector:
+            # print(type_)
+            # print(type_.Parameter[BuiltInParameter.ALL_MODEL_TYPE_NAME].AsString())
             mark_param = type_.LookupParameter('CP_Gen_Mark')
-            storage_type = mark_param.StorageType
-            if storage_type == StorageType.String:
-                mark_value = mark_param.AsString()
-                if mark_value == 'ПXX':
-                    return type_
+            if mark_param:
+                storage_type = mark_param.StorageType
+                if storage_type == StorageType.String:
+                    mark_value = mark_param.AsString()
+                    if mark_value is not None:
+                        if 'XX' in mark_value:
+                            return type_
+            else:
+                print('параметр CP_Gen_Mark не считан')
     else:
         return None
     
 # Функция для получения текущего типа в проекте по имени типа
-def get_type_by_name(doc, type_name):
-    collector = FEC(doc).OfClass(FloorType)
+def get_type_by_name(doc, class_name, type_name):
+    collector = FEC(doc).OfClass(class_name)
     for el in collector:
         if el.Parameter[BuiltInParameter.ALL_MODEL_TYPE_NAME].AsString() == type_name:
             return el
@@ -99,38 +106,50 @@ param_dict_1 = {
     'CP_Mat_Finish_03': ["Мaтериал_3", 30],
     'CP_Mat_Finish_04': ["Мaтериал_4", 40],
     'CP_Mat_Finish_05': ["Мaтериал_5", 50],
-    'CP_Mat_Finish_06': ["Мaтериал_6", 60]
+    'CP_Mat_Finish_06': ["Мaтериал_6", 60],
+    'Category': FloorType
 }
-new_type_name_1 = "Мое перекрытие 1"
+new_type_name_1 = "Мое перекрытие 2"
 
 param_dict_2 = {
-    'CP_Mat_Finish_01': ["Мaтериал_11", 10],
-    'CP_Mat_Finish_02': ["Мaтериал_12", 20],
-    'CP_Mat_Finish_03': ["Мaтериал_13", 30]
+    'CP_Mat_Finish_01': ["Мaтериал_21", 10],
+    'CP_Mat_Finish_02': ["Мaтериал_22", 20],
+    'CP_Mat_Finish_03': ["Мaтериал_23", 30],
+    'Category': WallType
 }
-new_type_name_2 = "Мое перекрытие 2"
+new_type_name_2 = "Моя стена 3"
+
+param_dict_3 = {
+    'CP_Mat_Finish_01': ["Мaтериал_31", 10],
+    'CP_Mat_Finish_02': ["Мaтериал_32", 20],
+    'CP_Mat_Finish_03': ["Мaтериал_33", 30],
+    'Category': CeilingType
+}
+new_type_name_3 = "Мой потолок 3"
 
 type_dict = {}
 type_dict[new_type_name_1] = param_dict_1
 type_dict[new_type_name_2] = param_dict_2
+type_dict[new_type_name_3] = param_dict_3
 
 #ПРЕДВАРИТЕЛЬНАЯ ОБРАБОТКА ВВОДНЫХ ДАННЫХ
 #Конвертация единиц толщин в системные
 material_width_list_internal = []
 for param_dict in type_dict.values():
-    for v in param_dict.values():
-        material_width = v[1]
-        material_width_internal = UnitUtils.ConvertToInternalUnits(material_width,UnitTypeId.Millimeters)
-        v[1] = material_width_internal
+    for key, v in param_dict.items():
+        if 'CP_Mat_Finish_' in key:
+            material_width = v[1]
+            material_width_internal = UnitUtils.ConvertToInternalUnits(material_width,UnitTypeId.Millimeters)
+            v[1] = material_width_internal
 
 # Начало транзакции
 with Transaction(doc, 'Тест') as t:
     t.Start()
 
     for new_type_name, param_dict in type_dict.items():
-
+        # print(param_dict['Category'])
         # Получение существующего типа перекрытия (например, "Generic 12")
-        default_type = get_default_type_by_class(doc, FloorType)
+        default_type = get_default_type_by_class(doc, param_dict['Category'])
         # Получение существующей составной структуры перекрытия
         compound_structure = default_type.GetCompoundStructure()
         # Получение индексов слоев сердцевины (Core) для модификации структуры
@@ -138,12 +157,14 @@ with Transaction(doc, 'Тест') as t:
         last_core_layer = compound_structure.GetLastCoreLayerIndex()    # Индекс последнего слоя сердцевины
 
         #Поиск текущего типоразмера в проекте
-        found_type = get_type_by_name(doc, new_type_name)
+        found_type = get_type_by_name(doc, param_dict['Category'], new_type_name)
         
         key_list = []
         for key in param_dict.keys():
-            key_list.append(key)
+            if 'CP_Mat_Finish_' in key:
+                key_list.append(key)
         sorted_key_list = sorted(key_list)
+        # print(sorted_key_list)
         
         if found_type is None:
             # Создание нового типа 
@@ -178,8 +199,8 @@ with Transaction(doc, 'Тест') as t:
             print('Новый типоразмер добавлен в проект - {}'.format(new_type_name))
             print('__')
         else:
+            # Обновление существующего типа
             print('Найден существующий типоразмер - {}'.format(found_type.Parameter[BuiltInParameter.ALL_MODEL_TYPE_NAME].AsString()))
-            #Обновление существующего типа
             cs = found_type.GetCompoundStructure()
             exist_layers = cs.GetLayers()
             check = 0
@@ -209,6 +230,7 @@ with Transaction(doc, 'Тест') as t:
                         check+=1
                     if new_material_width != exist_material_width:
                         print(new_material_name)
+                        print(new_material_width)
                         exist_layers[ind].Width = new_material_width
                         print('Перезаписана толщина слоя в пироге с индексом {}: {}'.format(ind+1, UnitUtils.ConvertFromInternalUnits(new_material_width,UnitTypeId.Millimeters)))
                         check+=1
