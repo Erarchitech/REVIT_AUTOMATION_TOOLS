@@ -53,12 +53,12 @@ def find_cell_coordinates(excel_path, target_value):
         for row in range(sheet.nrows):
             for col in range(sheet.ncols):
                 cell_value = str(sheet.cell_value(row, col))
-                cell_dot_ind = cell_value.find('.')
-                cell_score_ind = cell_value.find('_')
-                if cell_dot_ind != -1 and cell_score_ind == -1:
-                    mod_cell_value = cell_value[:cell_dot_ind]
-                else:
-                    mod_cell_value = cell_value
+                # cell_dot_ind = cell_value.find('.')
+                # cell_score_ind = cell_value.find('_')
+                # if cell_dot_ind != -1 and cell_score_ind == -1:
+                #     mod_cell_value = cell_value[:cell_dot_ind]
+                # else:
+                mod_cell_value = cell_value
                 
                 # Check if the cell contains the target value
                 if mod_cell_value == str(target_value):
@@ -88,12 +88,12 @@ def find_cell_coordinates_on_sheet(excel_path, sheet_index, target_value):
     for row in range(sheet.nrows):
         for col in range(sheet.ncols):
             cell_value = str(sheet.cell_value(row, col))
-            cell_dot_ind = cell_value.find('.')
-            cell_score_ind = cell_value.find('_')
-            if cell_dot_ind != -1 and cell_score_ind == -1:
-                mod_cell_value = cell_value[:cell_dot_ind]
-            else:
-                mod_cell_value = cell_value
+            # cell_dot_ind = cell_value.find('.')
+            # cell_score_ind = cell_value.find('_')
+            # if cell_dot_ind != -1 and cell_score_ind == -1:
+            #     mod_cell_value = cell_value[:cell_dot_ind]
+            # else:
+            mod_cell_value = cell_value
             
             # Check if the cell contains the target value
             if mod_cell_value == str(target_value):
@@ -167,6 +167,88 @@ def get_thickness_parameter(element):
         return param.AsDouble() * 0.3048  # Преобразование из футов в метры
     return None
 
+def create_param_dictionary(excel_path, target_sheet, sheet_index, row_ind, parameter_list_toextract):
+    # sheet_ind_list = find_cell_coordinates(excel_path, 'CP_Mat_Finish_01')[2] # Определяем индексы всех листов, где есть параметр материала
+    # print('row_ind -' + '{}'.format(row_ind))
+    # print('check00_mark_row_list')
+    image_param_col = find_cell_coordinates_on_sheet(excel_path, sheet_index, 'CP_Gen_Image')[1]
+    print('image_param_col - ' + str(image_param_col))
+    print(row_ind)
+    print(target_sheet)
+    print(target_sheet.name)
+    image_link = target_sheet.cell_value(row_ind-1, image_param_col-1)
+    print('CHECK')
+    print(len(image_link))
+    print(str(image_link))
+    if image_link:
+        param_dict['CP_Gen_Image'] = image_link
+        print('CHECK2')
+
+    for param in parameter_list_toextract:
+        param_rows_list = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[0] #извлекаем все строки параметра материала на данном листе
+        # print param_rows_list
+        param_found = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[1]  # извлекаем индекс столбца параметра материала на данном листе
+        if param_found:
+            if isinstance(param_rows_list, list) and len(param_rows_list)>1:
+                param_col_ind = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[1][0]-1  # извлекаем индекс столбца параметра материала на данном листе
+                # print('check1')
+                if row_ind in param_rows_list:
+                    # print('check2')
+                    material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
+                    thickness = target_sheet.cell_value(row_ind-1, param_col_ind+1)
+                    material_name = target_sheet.cell_value(row_ind-1, param_col_ind+3)
+                    if len(material_description)>0:
+                        if param not in param_dict.keys():
+                            param_dict[param] = []
+                        param_dict[param].append(thickness)
+                        param_dict[param].append(material_description)
+                        param_dict[param].append(material_name)
+                    elif param == 'FLOOR_ATTR_THICKNESS_PARAM':
+                        print('check04')
+                        # if param not in param_dict.keys():
+                        #     param_dict[param] = []
+                        # param_dict[param].append(thickness)
+                        param_dict[param] = thickness
+                        print('check03')
+                    if param == 'CP_Mat_Finish_01':
+                        type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
+                        function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
+                        param_dict[param].append(type_comments)
+                        param_dict[param].append(function)
+                            # Parameter_List_Internal.remove(param)
+                            # exec("print '{} - ' + '{}'".format(param, material_description))
+            else:
+                print(excel_path)
+                print(sheet_index)
+                print(param)
+                print(find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[1])
+                param_col_ind = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[1]-1
+                # print('check3')
+                if row_ind == param_rows_list:
+                    # print('check04')
+                    material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
+                    thickness = target_sheet.cell_value(row_ind-1, param_col_ind+1)
+                    material_name = target_sheet.cell_value(row_ind-1, param_col_ind+3)
+                    if len(material_description)>0:
+                        if param not in param_dict.keys():
+                            param_dict[param] = []
+                        param_dict[param].append(thickness)
+                        param_dict[param].append(material_description)
+                        param_dict[param].append(material_name)
+                    elif param == 'FLOOR_ATTR_THICKNESS_PARAM':
+                        print('check05')
+                        # if param not in param_dict.keys():
+                        #     param_dict[param] = []
+                        # param_dict[param].append(thickness)
+                        param_dict[param] = thickness
+                        print('check06')
+                    if param == 'CP_Mat_Finish_01':
+                        type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
+                        function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
+                        param_dict[param].append(type_comments)
+                        param_dict[param].append(function)
+    return param_dict
+
 
 #USER INPUTS
 excel_path = pyrevit.forms.pick_file(file_ext='xls', files_filter='', init_dir='', restore_dir=True, multi_file=False, unc_paths=False, title='Выбери файл Excel Реестра')
@@ -190,11 +272,31 @@ for sheet in selected_sheets:
                     marks.append(mark)
 elements_to_exclude = ["CP_Gen_Mark", 'Марка типа', 'Марка', '']
 marks = [element for element in marks if element not in elements_to_exclude]
-marks = list(set(marks))
-selected_marks = pyrevit.forms.SelectFromList.show(marks, title = 'Выбери Марки', multiselect = True, button_name = 'Выбрать')
+
+marks_check = set(marks)
+marks_not_modified = []
+marks_modified = []
+for mark in marks_check:
+    score_ind = mark.find('_')
+    # print slash_ind
+    if score_ind != -1:
+        marks_not_modified.append(mark[:score_ind])
+    else:
+        marks_modified.append(mark)
+
+marks_to_remove = []
+
+for m in marks_modified:
+    if m in marks_not_modified:
+        marks_to_remove.append(m)
+
+for m in marks_to_remove:
+    marks_modified.remove(m)
+
+selected_marks = pyrevit.forms.SelectFromList.show(list(marks_modified), title = 'Выбери Марки', multiselect = True, button_name = 'Выбрать')
 
 if len(selected_marks) == 0:
-    selected_marks = marks
+    selected_marks = marks_modified
 
 # print selected_marks
 
@@ -227,35 +329,26 @@ fam_type_input_names = [
     "FLOOR_ATTR_THICKNESS_PARAM"
 ]
 
-marks_modified = []
-for mark in selected_marks:
-    #Определяем общую марку семейства
-    # dot_ind = mark.find('.')
-    # slash_ind = mark.find('-')
-    # # print slash_ind
-    # if dot_ind != -1 and slash_ind == -1:
-    #     mark_mod = mark[:dot_ind]
-    # else:
-    #     mark_mod = mark
-    marks_modified.append(mark)
-
 lib_ind = excel_path.find('01_БИБЛИОТЕКА_ПРОЕКТА')
 library_folder_path = excel_path[:lib_ind+len('01_БИБЛИОТЕКА_ПРОЕКТА')+1] + '01_СЕМЕЙСТВА\\'
 
 type_dict = {}
-for target_value in marks_modified:
+for target_value in selected_marks:
     print '==================ЧТЕНИЕ ДАННЫХ ИЗ РЕЕСТРА========================='
 
     param_dict = {}
+    merged_param_dict = {}
     
     #Извлекаем значения листа и строк типоразмеров, соотвествующих марке семейства
-    mark_row_list = []
+    # mark_row_list = []
     mark_row_list = find_cell_coordinates(excel_path, target_value)[0]
-    # print mark_row_list
-    multiple_types = False
+    print('CHECK501')
+    print mark_row_list
+    print('CHECK501')
+    multiple_rows = False
     if isinstance(mark_row_list, list):
-        multiple_types = True
-    if multiple_types:
+        multiple_rows = True
+    if multiple_rows:
         sheet_index = find_cell_coordinates(excel_path, target_value)[2][0]
     else:
         sheet_index = find_cell_coordinates(excel_path, target_value)[2]
@@ -263,93 +356,43 @@ for target_value in marks_modified:
     exec("print 'Код каталога в реестре - '+ '{}'".format(target_sheet.name))
 
     #Собираем все значения параметров из реестра в словарь
-
-    for row_ind in mark_row_list:
-        sheet_ind_list = find_cell_coordinates(excel_path, 'CP_Mat_Finish_01')[2] # Определяем индексы всех листов, где есть параметр материала
-        # print('row_ind -' + '{}'.format(row_ind))
-        # print('check00_mark_row_list')
-        image_param_col = find_cell_coordinates_on_sheet(excel_path, sheet_index, 'CP_Gen_Image')[1]
-        image_link = sheet.cell_value(row_ind, image_param_col-1)
-        if image_link:
-            param_dict['CP_Gen_Image'] = image_link
-
-        for param in Parameter_List_Internal:
-            param_rows_list = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[0] #извлекаем все строки параметра материала на данном листе
-            # print param_rows_list
-            if isinstance(param_rows_list, list) and len(param_rows_list)>1:
-                param_col_ind = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[1][0]-1  # извлекаем индекс столбца параметра материала на данном листе
-                # print('check1')
-                if row_ind in param_rows_list:
-                    # print('check2')
-                    material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
-                    thickness = target_sheet.cell_value(row_ind-1, param_col_ind+1)
-                    material_name = target_sheet.cell_value(row_ind-1, param_col_ind+3)
-                    if len(material_description)>0:
-                        if param not in param_dict.keys():
-                            param_dict[param] = []
-                        param_dict[param].append(thickness)
-                        param_dict[param].append(material_description)
-                        param_dict[param].append(material_name)
-                    elif param == 'FLOOR_ATTR_THICKNESS_PARAM':
-                        # print('check04')
-                        if param not in param_dict.keys():
-                            param_dict[param] = []
-                        param_dict[param].append(thickness)
-                        # param_dict[param] = thickness
-                        # print('check03')
-                    if param == 'CP_Mat_Finish_01':
-                        type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
-                        function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
-                        param_dict[param].append(type_comments)
-                        param_dict[param].append(function)
-                            # Parameter_List_Internal.remove(param)
-                            # exec("print '{} - ' + '{}'".format(param, material_description))
-            else:
-                param_col_ind = find_cell_coordinates_on_sheet(excel_path, sheet_index, param)[1]-1
-                # print('check3')
-                if row_ind == param_rows_list:
-                    # print('check04')
-                    material_description = target_sheet.cell_value(row_ind-1, param_col_ind+2)
-                    thickness = target_sheet.cell_value(row_ind-1, param_col_ind+1)
-                    material_name = target_sheet.cell_value(row_ind-1, param_col_ind+3)
-                    if len(material_description)>0:
-                        if param not in param_dict.keys():
-                            param_dict[param] = []
-                        param_dict[param].append(thickness)
-                        param_dict[param].append(material_description)
-                        param_dict[param].append(material_name)
-                    elif param == 'FLOOR_ATTR_THICKNESS_PARAM':
-                        # print('check05')
-                        if param not in param_dict.keys():
-                            param_dict[param] = []
-                        param_dict[param].append(thickness)
-                        # param_dict[param] = thickness
-                        # print('check06')
-                    if param == 'CP_Mat_Finish_01':
-                        type_comments = target_sheet.cell_value(row_ind-1, param_col_ind-1)
-                        function = target_sheet.cell_value(row_ind-1, param_col_ind-3)
-                        param_dict[param].append(type_comments)
-                        param_dict[param].append(function)
+    if multiple_rows:
+        for row_ind in mark_row_list:
+            param_dict = create_param_dictionary(excel_path, target_sheet, sheet_index, row_ind, Parameter_List_Internal)
+            merged_param_dict.update(param_dict)
+            print('check01')
+    else:
+        param_dict = create_param_dictionary(excel_path, target_sheet, sheet_index, mark_row_list, Parameter_List_Internal)
+        merged_param_dict = param_dict
+        print('check02')
     
     fam_category = Categories_Dict[target_sheet.name][0]
-    param_dict['Category'] = fam_category
+    merged_param_dict['Category'] = fam_category
     mark = target_value
-    param_dict['CP_Gen_Mark'] = mark
-    comments = param_dict['CP_Mat_Finish_01'][3]
-    thickness_total = param_dict['FLOOR_ATTR_THICKNESS_PARAM'][0]
+    merged_param_dict['CP_Gen_Mark'] = mark
+    comments = merged_param_dict['CP_Mat_Finish_01'][3]
+    print('check03')
+    print(merged_param_dict['CP_Gen_Mark'] )
+    print(merged_param_dict['FLOOR_ATTR_THICKNESS_PARAM'])
+    # if multiple_rows:
+    #     print('check11')
+    #     thickness_total = merged_param_dict['FLOOR_ATTR_THICKNESS_PARAM'][0]
+    # else:
+    thickness_total = merged_param_dict['FLOOR_ATTR_THICKNESS_PARAM']
+    print('check12')
     print(thickness_total)
     category_name = Categories_Dict[target_sheet.name][1]
     if "ПП" in mark:
         prefix_1 = 'FL_'
+    elif 'ПО' in mark:
+        prefix_1 = 'CL_'
     elif 'П' in mark:
         prefix_1 = 'FFL_'
     elif 'СТ' in mark:
         prefix_1 = 'WL_'
     elif 'ОТ' in mark:
         prefix_1 = 'WF_'
-    elif 'ПО' in mark:
-        prefix_1 = 'CL_'
-    prefix_2 = param_dict['CP_Mat_Finish_01'][4]
+    prefix_2 = merged_param_dict['CP_Mat_Finish_01'][4]
     # print('check02')
 
 
@@ -365,7 +408,7 @@ for target_value in marks_modified:
     exec("print 'Общая толщина пирога - {}' + 'мм'".format(thickness_total))
 
     
-    for par, value in param_dict.items():
+    for par, value in merged_param_dict.items():
         if par == 'Category':
             exec("print 'Категория - ' + '{}'".format(category_name))
             print("___")
@@ -376,18 +419,19 @@ for target_value in marks_modified:
             exec("print 'Марка типа - ' + '{}'".format(value))
             print("___")
         else:
-            if len(value)>1:
-                exec("print '{}'".format(par))
-                exec("print 'Толщина - ' + '{}'".format(value[0]))
-                exec("print 'Описание материала - ' + '{}'".format(value[1]))
-                exec("print 'Материал Revit - ' + '{}'".format(value[2]))
-            if len(value)>3:
-                exec("print 'Комментарии к типоразмеру - ' + '{}'".format(value[3]))
-                exec("print 'Функция - ' + '{}'".format(value[4]))
-            print("___")
+            if isinstance(value, list):
+                if len(value)>1:
+                    exec("print '{}'".format(par))
+                    exec("print 'Толщина - ' + '{}'".format(value[0]))
+                    exec("print 'Описание материала - ' + '{}'".format(value[1]))
+                    exec("print 'Материал Revit - ' + '{}'".format(value[2]))
+                if len(value)>3:
+                    exec("print 'Комментарии к типоразмеру - ' + '{}'".format(value[3]))
+                    exec("print 'Функция - ' + '{}'".format(value[4]))
+                print("___")
 
 
-    type_dict[type_name] = param_dict
+    type_dict[type_name] = merged_param_dict
 
 updated_types = types_updater(doc, type_dict)
 updated_parameters = parameters_updater(doc, type_dict)
