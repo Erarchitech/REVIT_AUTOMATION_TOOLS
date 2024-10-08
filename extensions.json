@@ -55,6 +55,20 @@
             "website": "https://github.com/gtalarico/pyrevitplus",
             "image": "",
             "dependencies": []
+        },
+        {
+            "builtin": "False",
+            "enable": "False",
+            "type": "extension",
+            "rocket_mode_compatible": "False",
+            "name": "CREA",
+            "description": "CreaPlus Tools",
+            "author": "Evgenii Ermolenko",
+            "author_profile": "https://github.com/Erarchitech",
+            "url": "https://github.com/Erarchitech/REVIT_AUTOMATION_TOOLS.git",
+            "website": "https://github.com/Erarchitech/REVIT_AUTOMATION_TOOLS",
+            "image": "",
+            "dependencies": []
         }
         
     ]
