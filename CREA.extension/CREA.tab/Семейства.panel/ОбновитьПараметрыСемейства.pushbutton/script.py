@@ -59,7 +59,7 @@ from datetime import datetime
 import xlrd
 import xlsxwriter
 
-print('CHECK01')
+# print('CHECK01')
 
 def _get_unit_type(format_options):
     if int(app_version) < 2022:
@@ -182,7 +182,7 @@ def close_inactive_docs(uiapp, save_modified=False, close_ui_docs=False):
 # Function to open and close family documents
 
 #USER INPUTS
-print('CHECK01')
+# print('CHECK01')
 excel_path = pyrevit.forms.pick_file(file_ext='xls', files_filter='', init_dir='', restore_dir=True, multi_file=False, unc_paths=False, title='Выбери файл Excel Реестра')
 workbook = xlrd.open_workbook(excel_path)
 
